@@ -17,7 +17,6 @@ function ChatPage() {
       createdAt: new Date(),
     };
     setMessages([...messages, newMessage]);
-    console.log('Message sent:', newMessage);
   };
 
   // Filter messages for selected conversation
@@ -31,12 +30,10 @@ function ChatPage() {
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar - User List */}
       <div className="w-80 bg-white border-r flex flex-col">
-        {/* Header */}
         <div className="p-4 border-b bg-gradient-to-r from-blue-500 to-purple-600">
           <h2 className="text-xl font-bold text-white">Messages</h2>
         </div>
 
-        {/* User List */}
         <div className="flex-1 overflow-y-auto">
           {dummyUsers.map((user) => (
             <UserListItem
