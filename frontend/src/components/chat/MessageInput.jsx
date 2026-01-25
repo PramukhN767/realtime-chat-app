@@ -23,7 +23,12 @@ function MessageInput({ onSendMessage }) {
         />
         <button
           type="submit"
-          className="bg-blue-500 text-white px-6 py-3 rounded-full hover:bg-blue-600 transition font-semibold"
+          disabled={!message.trim()}
+          className={`px-6 py-3 rounded-full font-semibold transition ${
+            message.trim()
+              ? 'bg-blue-500 text-white hover:bg-blue-600'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          }`}
         >
           Send
         </button>

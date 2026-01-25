@@ -1,4 +1,4 @@
-function UserListItem({ user, isSelected, onClick }) {
+function UserListItem({ user, isSelected, onClick, messageCount }) {
   const formatLastSeen = (date) => {
     const now = new Date();
     const diff = now - new Date(date);
@@ -24,7 +24,6 @@ function UserListItem({ user, isSelected, onClick }) {
         <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
           {user.username.charAt(0).toUpperCase()}
         </div>
-        {/* Online indicator */}
         {user.isOnline && (
           <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
         )}
@@ -32,7 +31,14 @@ function UserListItem({ user, isSelected, onClick }) {
 
       {/* User info */}
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-gray-800 truncate">{user.username}</p>
+        <div className="flex items-center justify-between">
+          <p className="font-semibold text-gray-800 truncate">{user.username}</p>
+          {messageCount > 0 && (
+            <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-1">
+              {messageCount}
+            </span>
+          )}
+        </div>
         <p className="text-sm text-gray-500">
           {user.isOnline ? 'Online' : `Last seen ${formatLastSeen(user.lastSeen)}`}
         </p>

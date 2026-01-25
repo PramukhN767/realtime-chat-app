@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { dummyUsers, dummyMessages } from '../utils/dummyData';
 import UserListItem from '../components/chat/UserListItem';
 import MessageBubble from '../components/chat/MessageBubble';
@@ -7,6 +7,23 @@ import MessageInput from '../components/chat/MessageInput';
 function ChatPage() {
   const [selectedUser, setSelectedUser] = useState(dummyUsers[0]);
   const [messages, setMessages] = useState(dummyMessages);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [conversationMessages]);
+
+  const handleUserClick = (user) => {
+    setIsLoading(true);
+    setSelectedUser(user);
+    setTimeout(() => setIsLoading(false), 300);
+  };
 
   const handleSendMessage = (content) => {
     const newMessage = {
@@ -35,14 +52,23 @@ function ChatPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {dummyUsers.map((user) => (
-            <UserListItem
-              key={user.id}
-              user={user}
-              isSelected={selectedUser.id === user.id}
-              onClick={() => setSelectedUser(user)}
-            />
-          ))}
+          {dummyUsers.map((user) => {
+            const userMessageCount = messages.filter(
+              (msg) =>
+                (msg.senderId === user.id && msg.recipientId === 'current-user') ||
+                (msg.senderId === 'current-user' && msg.recipientId === user.id)
+            ).length;
+
+            return (
+              <UserListItem
+                key={user.id}
+                user={user}
+                isSelected={selectedUser.id === user.id}
+                onClick={() => handleUserClick(user)}
+                messageCount={userMessageCount}
+              />
+            );
+          })}
         </div>
       </div>
 
@@ -63,18 +89,25 @@ function ChatPage() {
 
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-          {conversationMessages.length === 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-gray-500">Loading messages...</div>
+            </div>
+          ) : conversationMessages.length === 0 ? (
             <div className="flex items-center justify-center h-full text-gray-500">
               No messages yet. Start the conversation!
             </div>
           ) : (
-            conversationMessages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                message={message}
-                isOwnMessage={message.senderId === 'current-user'}
-              />
-            ))
+            <>
+              {conversationMessages.map((message) => (
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  isOwnMessage={message.senderId === 'current-user'}
+                />
+              ))}
+              <div ref={messagesEndRef} />
+            </>
           )}
         </div>
 
