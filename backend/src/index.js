@@ -3,8 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import http from 'http';
 import { Server } from 'socket.io';
+import authRoutes from './routes/authRoutes.js';
 
-// Load environment variables
 dotenv.config();
 
 const app = express();
@@ -23,22 +23,23 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Test routes
+// Routes
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'Chat App Backend is running!',
+    message: 'Chat App Backend API',
     timestamp: new Date().toISOString()
   });
 });
 
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString() 
-  });
+app.use('/api/auth', authRoutes);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: err.message || 'Something went wrong' });
 });
 
-// Socket.io connection
+// Socket.io
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
   
