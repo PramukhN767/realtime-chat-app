@@ -1,6 +1,3 @@
-// Temporarily disabled for testing
-// import pkg from '@prisma/client';
-// const { PrismaClient } = pkg;
-// export const prisma = new PrismaClient();
+import { PrismaClient } from '@prisma/client';
 
-export const prisma = null; // Placeholder
+export const prisma = new PrismaClient();
