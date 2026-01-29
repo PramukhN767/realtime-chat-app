@@ -33,6 +33,9 @@ export const login = async (req, res, next) => {
     const result = await authService.login(email, password);
     res.json(result);
   } catch (error) {
+    if (error.message === 'Invalid email or password ') {
+      return res.status(401).json({ error : error.message });
+    }
     next(error);
   }
 };

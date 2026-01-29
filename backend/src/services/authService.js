@@ -34,7 +34,28 @@ export const authService = {
   },
 
   async login(email, password) {
-    throw new Error('Login not implemented yet');
+    const user = await prisma.user.findUnique({
+      where : { email }
+    });
+
+    if (!user) {
+      throw new error('Invalid email or password');
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.password);
+
+    if (!isValidPassword) {
+      throw new error('Invalid email or password');
+    }
+
+    const token = generateToken(user.id);
+
+    const { password : _, ...userWithoutPassword } = user;
+
+    return {
+      user : userWithoutPassword,
+      token,
+    };
   },
 
   async getUserById(userId) {

@@ -11,14 +11,6 @@ function ChatPage() {
   
   const messagesEndRef = useRef(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [conversationMessages]);
-
   const handleUserClick = (user) => {
     setIsLoading(true);
     setSelectedUser(user);
@@ -42,6 +34,11 @@ function ChatPage() {
       (msg.senderId === selectedUser.id && msg.recipientId === 'current-user') ||
       (msg.senderId === 'current-user' && msg.recipientId === selectedUser.id)
   );
+
+  // Auto-scroll when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, selectedUser]);
 
   return (
     <div className="flex h-screen bg-gray-100">
