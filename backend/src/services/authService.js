@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import { prisma } from '../config/database.js';
 import { generateToken } from '../utils/jwt.js';
+import { userService } from './userService.js';
 
 export const authService = {
   async signup(username, email, password) {
@@ -23,8 +24,6 @@ export const authService = {
     });
 
     const token = generateToken(user.id);
-
-    // Return user without password
     const { password: _, ...userWithoutPassword } = user;
 
     return {
@@ -35,46 +34,29 @@ export const authService = {
 
   async login(email, password) {
     const user = await prisma.user.findUnique({
-      where : { email }
+      where: { email }
     });
 
     if (!user) {
-      throw new error('Invalid email or password');
+      throw new Error('Invalid email or password');
     }
 
-    const isValidPassword = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await bcrypt.compare(password, user.password);
 
-    if (!isValidPassword) {
-      throw new error('Invalid email or password');
+    if (!isPasswordValid) {
+      throw new Error('Invalid email or password');
     }
 
     const token = generateToken(user.id);
-
-    const { password : _, ...userWithoutPassword } = user;
+    const { password: _, ...userWithoutPassword } = user;
 
     return {
-      user : userWithoutPassword,
+      user: userWithoutPassword,
       token,
     };
   },
 
   async getUserById(userId) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        isOnline: true,
-        lastSeen: true,
-        createdAt: true,
-      },
-    });
-
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    return user;
+    return userService.getUserById(userId);
   },
 };
