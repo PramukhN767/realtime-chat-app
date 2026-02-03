@@ -1,13 +1,18 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useContext } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 
 function SignupPage() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const { signup } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -21,7 +26,16 @@ function SignupPage() {
       return;
     }
 
-    console.log('Signup attempt:', { username, email, password });
+    setLoading(true);
+    try {
+      await signup(username, email, password);
+      navigate('/chat'); 
+    } catch (err) {
+      const message = err.response?.data?.error || 'Signup failed';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -48,6 +62,7 @@ function SignupPage() {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               placeholder="Choose a username"
               required
+              disabled={loading}
             />
           </div>
 
@@ -62,6 +77,7 @@ function SignupPage() {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               placeholder="Enter your email"
               required
+              disabled={loading}
             />
           </div>
 
@@ -76,14 +92,20 @@ function SignupPage() {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               placeholder="Create a password"
               required
+              disabled={loading}
             />
           </div>
 
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white font-semibold py-3 rounded-lg hover:opacity-90 transition duration-200"
+            disabled={loading}
+            className={`w-full text-white font-semibold py-3 rounded-lg transition duration-200 ${
+              loading
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-gradient-to-r from-purple-500 to-pink-600 hover:opacity-90'
+            }`}
           >
-            Sign Up
+            {loading ? 'Creating account...' : 'Sign Up'}
           </button>
         </form>
 
