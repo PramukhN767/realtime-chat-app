@@ -6,6 +6,7 @@ import { Server } from 'socket.io';
 import authRoutes from './routes/authRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import { setupSocket } from './socket/index.js';
 
 dotenv.config();
 
@@ -42,14 +43,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'Something went wrong' });
 });
 
-// Socket.io
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-  
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-  });
-});
+setupSocket(io);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {

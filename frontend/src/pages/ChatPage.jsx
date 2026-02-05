@@ -2,12 +2,13 @@ import { useState, useRef, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
+import socketService from '../services/socket';
 import UserListItem from '../components/chat/UserListItem';
 import MessageBubble from '../components/chat/MessageBubble';
 import MessageInput from '../components/chat/MessageInput';
 
 function ChatPage() {
-  const { user, logout } = useContext(AuthContext);
+  const { user, token, logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const [users, setUsers] = useState([]);
@@ -17,6 +18,24 @@ function ChatPage() {
   const [loadingUsers, setLoadingUsers] = useState(true);
   
   const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    if (token) {
+      socketService.connect(token);
+
+      socketService.on('receive_message', handleReceiveMessage);
+
+      socketService.on('message_sent', handleMessageSent);
+
+      socketService.on('user_status_changed', handleUserStatusChange);
+
+      return () => {
+        socketService.off('receive_message', handleReceiveMessage);
+        socketService.off('message_sent', handleMessageSent);
+        socketService.off('user_status_changed', handleUserStatusChange);
+      };
+    }
+  }, [token]);
 
   useEffect(() => {
     fetchUsers();
@@ -58,6 +77,44 @@ function ChatPage() {
     }
   };
 
+  const handleReceiveMessage = (message) => {
+    if (selectedUser) {
+      const isRelevant = 
+        (message.senderId === selectedUser.id && message.recipientId === user.id) ||
+        (message.senderId === user.id && message.recipientId === selectedUser.id);
+      
+      if (isRelevant) {
+        setMessages((prev) => {
+          const exists = prev.some(m => m.id === message.id);
+          if (exists) return prev;
+          return [...prev, message];
+        });
+      }
+    }
+  };
+
+  const handleMessageSent = (message) => {
+    setMessages((prev) => 
+      prev.map(m => 
+        typeof m.id === 'string' && m.id.startsWith('temp-') && m.content === message.content
+          ? message
+          : m
+      )
+    );
+  };
+
+  const handleUserStatusChange = ({ userId, isOnline }) => {
+    setUsers((prevUsers) =>
+      prevUsers.map((user) =>
+        user.id === userId ? { ...user, isOnline } : user
+      )
+    );
+
+    if (selectedUser?.id === userId) {
+      setSelectedUser((prev) => ({ ...prev, isOnline }));
+    }
+  };
+
   const handleUserClick = (user) => {
     setSelectedUser(user);
   };
@@ -65,20 +122,24 @@ function ChatPage() {
   const handleSendMessage = async (content) => {
     if (!selectedUser) return;
 
-    try {
-      const response = await api.post('/messages/send', {
-        recipientId: selectedUser.id,
-        content,
-      });
+    const tempMessage = {
+      id: `temp-${Date.now()}`,
+      content,
+      senderId: user.id,
+      recipientId: selectedUser.id,
+      createdAt: new Date().toISOString(),
+    };
 
-      setMessages([...messages, response.data]);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      alert('Failed to send message');
-    }
+    setMessages((prev) => [...prev, tempMessage]);
+
+    socketService.emit('send_message', {
+      recipientId: selectedUser.id,
+      content,
+    });
   };
 
   const handleLogout = () => {
+    socketService.disconnect();
     logout();
     navigate('/login');
   };
@@ -141,8 +202,13 @@ function ChatPage() {
           <>
             {/* Chat Header */}
             <div className="bg-white border-b p-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
-                {selectedUser.username.charAt(0).toUpperCase()}
+              <div className="relative">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+                  {selectedUser.username.charAt(0).toUpperCase()}
+                </div>
+                {selectedUser.isOnline && (
+                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                )}
               </div>
               <div>
                 <h3 className="font-semibold text-gray-800">{selectedUser.username}</h3>
