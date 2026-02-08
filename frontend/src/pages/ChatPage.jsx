@@ -16,6 +16,7 @@ function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [typingUsers, setTypingUsers] = useState(new Set());
   
   const messagesEndRef = useRef(null);
 
@@ -29,10 +30,13 @@ function ChatPage() {
 
       socketService.on('user_status_changed', handleUserStatusChange);
 
+      socketService.on('user_typing', handleUserTyping);
+
       return () => {
         socketService.off('receive_message', handleReceiveMessage);
         socketService.off('message_sent', handleMessageSent);
         socketService.off('user_status_changed', handleUserStatusChange);
+        socketService.off('user_typing', handleUserTyping);
       };
     }
   }, [token]);
@@ -113,6 +117,18 @@ function ChatPage() {
     if (selectedUser?.id === userId) {
       setSelectedUser((prev) => ({ ...prev, isOnline }));
     }
+  };
+
+  const handleUserTyping = ({ userId, isTyping }) => {
+    setTypingUsers((prev) => {
+      const newSet = new Set(prev);
+      if (isTyping) {
+        newSet.add(userId);
+      } else {
+        newSet.delete(userId);
+      }
+      return newSet;
+    });
   };
 
   const handleUserClick = (user) => {
@@ -237,13 +253,27 @@ function ChatPage() {
                       isOwnMessage={message.senderId === user.id}
                     />
                   ))}
+                  
+                  {/* Typing Indicator */}
+                  {typingUsers.has(selectedUser?.id) && (
+                    <div className="flex justify-start mb-4">
+                      <div className="bg-gray-200 px-4 py-2 rounded-2xl rounded-bl-none">
+                        <div className="flex gap-1">
+                          <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+                          <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                          <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div ref={messagesEndRef} />
                 </>
               )}
             </div>
 
             {/* Message Input */}
-            <MessageInput onSendMessage={handleSendMessage} />
+            <MessageInput onSendMessage={handleSendMessage} recipientId={selectedUser.id} socketService={socketService}/>
           </>
         ) : (
           <div className="flex items-center justify-center h-full text-gray-500">

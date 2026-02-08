@@ -1,13 +1,44 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-function MessageInput({ onSendMessage }) {
+function MessageInput({ onSendMessage, recipientId, socketService }) {
   const [message, setMessage] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+
+  useEffect(() => {
+    if (message.trim() && !isTyping) {
+      setIsTyping(true);
+      socketService?.emit('typing', {
+        recipientId,
+        isTyping: true,
+      });
+    }
+
+    const timeout = setTimeout(() => {
+      if (isTyping) {
+        setIsTyping(false);
+        socketService?.emit('typing', {
+          recipientId,
+          isTyping: false,
+        });
+      }
+    }, 2000);
+
+    return () => clearTimeout(timeout);
+  }, [message]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (message.trim()) {
       onSendMessage(message);
       setMessage('');
+      
+      if (isTyping) {
+        setIsTyping(false);
+        socketService?.emit('typing', {
+          recipientId,
+          isTyping: false,
+        });
+      }
     }
   };
 
