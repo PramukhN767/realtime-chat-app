@@ -8,16 +8,13 @@ function MessageBubble({ message, isOwnMessage }) {
     const diffDays = Math.floor(diffMs / 86400000);
 
     if (diffMins < 1) return 'Just now';
-    
     if (diffMins < 60) return `${diffMins}m ago`;
-    
     if (diffHours < 24) {
       return messageDate.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
       });
     }
-    
     if (diffDays < 7) {
       return messageDate.toLocaleDateString('en-US', {
         weekday: 'short',
@@ -25,7 +22,6 @@ function MessageBubble({ message, isOwnMessage }) {
         minute: '2-digit',
       });
     }
-    
     return messageDate.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -34,10 +30,16 @@ function MessageBubble({ message, isOwnMessage }) {
     });
   };
 
+  const isTemp = typeof message.id === 'string' && message.id.startsWith('temp-');
+
   return (
-    <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-4`}>
+    <div 
+      className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-4 animate-fadeIn`}
+    >
       <div
-        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
+        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl transition-opacity ${
+          isTemp ? 'opacity-70' : 'opacity-100'
+        } ${
           isOwnMessage
             ? 'bg-blue-500 text-white rounded-br-none'
             : 'bg-gray-200 text-gray-800 rounded-bl-none'
