@@ -20,6 +20,8 @@ model User {
   
   sentMessages     Message[] @relation("sender")
   receivedMessages Message[] @relation("recipient")
+  sentRequests     ContactRequest[] @relation("sent_requests")
+  receivedRequests ContactRequest[] @relation("received_requests")
 
   @@map("users")
 }
@@ -39,4 +41,19 @@ model Message {
   @@index([senderId, recipientId])
   @@index([createdAt])
   @@map("messages")
+}
+
+model ContactRequest {
+  id          String   @id @default(uuid())
+  senderId    String
+  recipientId String
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+  
+  sender    User @relation("sent_requests", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User @relation("received_requests", fields: [recipientId], references: [id], onDelete: Cascade)
+  
+  @@unique([senderId, recipientId])
+  @@index([recipientId, status])
+  @@map("contact_requests")
 }

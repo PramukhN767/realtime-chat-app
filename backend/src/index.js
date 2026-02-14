@@ -6,6 +6,7 @@ import { Server } from 'socket.io';
 import authRoutes from './routes/authRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import contactRoutes from './routes/contactRoutes.js'; 
 import { setupSocket } from './socket/index.js';
 
 dotenv.config();
@@ -37,6 +38,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/contacts', contactRoutes); 
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
