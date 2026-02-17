@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
+import contactApi from '../services/contactApi';
+import { Link } from 'react-router-dom';
 import socketService from '../services/socket';
 import UserListItem from '../components/chat/UserListItem';
 import MessageBubble from '../components/chat/MessageBubble';
@@ -23,10 +25,19 @@ function ChatPage() {
 
   useEffect(() => {
     if (token) {
+      console.log('Connecting to socket...');
       socketService.connect(token);
 
-      socketService.on('receive_message', handleReceiveMessage);
-      socketService.on('message_sent', handleMessageSent);
+      socketService.on('receive_message', (message) => {
+        console.log('Received message:', message);
+        handleReceiveMessage(message);
+      });
+
+      socketService.on('message_sent', (message) => {
+        console.log('Message sent confirmed:', message);
+        handleMessageSent(message);
+      });
+
       socketService.on('user_status_changed', handleUserStatusChange);
       socketService.on('user_typing', handleUserTyping);
 
@@ -67,13 +78,13 @@ function ChatPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await api.get('/users');
-      setUsers(response.data);
-      if (response.data.length > 0) {
-        setSelectedUser(response.data[0]);
+      const contacts = await contactApi.getContacts();
+      setUsers(contacts);
+      if (contacts.length > 0) {
+        setSelectedUser(contacts[0]);
       }
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error fetching contacts:', error);
     } finally {
       setLoadingUsers(false);
     }
@@ -204,10 +215,16 @@ function ChatPage() {
   if (users.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center flex-col gap-4">
-        <p className="text-gray-600">No other users found. Create more accounts to chat!</p>
+        <p className="text-gray-600">No contacts yet. Add some contacts to start chatting!</p>
+        <Link
+          to="/find-contacts"
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Find Contacts
+        </Link>
         <button
           onClick={handleLogout}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
         >
           Logout
         </button>
@@ -225,12 +242,21 @@ function ChatPage() {
               <h2 className="text-xl font-bold text-white">Messages</h2>
               <p className="text-sm text-blue-100">{user?.username}</p>
             </div>
-            <button
-              onClick={handleLogout}
-              className="text-white text-sm hover:underline"
-            >
-              Logout
-            </button>
+            <div className="flex gap-2">
+              {/* Add Contacts Button */}
+              <Link
+                to="/find-contacts"
+                className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-lg text-sm transition"
+              >
+                + Add
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="text-white text-sm hover:underline"
+              >
+                Logout
+              </button>
+            </div>
           </div>
           
           {/* Search Box */}
