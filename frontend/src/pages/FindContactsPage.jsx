@@ -46,73 +46,87 @@ function FindContactsPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-2xl mx-auto">
-        <div className="mb-6">
+        {/* Header */}
+        <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-3xl font-bold text-gray-800">Find Contacts</h1>
-            <Link to="/chat" className="text-blue-600 hover:underline">
+            <h1 className="text-3xl font-bold text-gray-900">Find Contacts</h1>
+            <Link to="/chat" className="text-blue-600 hover:underline text-sm font-medium">
               ← Back to Chat
             </Link>
           </div>
-          <p className="text-gray-600">Search for users to connect with</p>
+          <p className="text-gray-600 text-sm">Search for users and send contact requests</p>
         </div>
 
+        {/* Requests Link Card */}
         <Link
           to="/requests"
-          className="block mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4 hover:bg-blue-100 transition"
+          className="block mb-8 bg-white border border-gray-200 rounded-2xl p-5 hover:border-blue-300 hover:shadow-sm transition-all"
         >
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-gray-800">View Pending Requests</h3>
+              <h3 className="font-semibold text-gray-900 mb-1">View Pending Requests</h3>
               <p className="text-sm text-gray-600">See who wants to connect with you</p>
             </div>
-            <span className="text-2xl">→</span>
+            <span className="text-2xl text-gray-400">→</span>
           </div>
         </Link>
 
-        <form onSubmit={handleSearch} className="mb-6">
-          <div className="flex gap-2">
+        {/* Search Bar */}
+        <form onSubmit={handleSearch} className="mb-8">
+          <div className="flex gap-3">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by username..."
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-5 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 text-sm transition-colors"
             />
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400"
+              className={`px-8 py-3 rounded-xl font-medium text-sm transition-all ${
+                loading
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:opacity-90 hover:shadow-lg'
+              }`}
             >
               {loading ? 'Searching...' : 'Search'}
             </button>
           </div>
         </form>
 
+        {/* Message */}
         {message && (
-          <p className="text-center text-gray-600 mb-4">{message}</p>
+          <p className="text-center text-gray-600 mb-6 text-sm">{message}</p>
         )}
 
-        <div className="space-y-3">
+        {/* Search Results Grid */}
+        <div className="grid grid-cols-1 gap-3">
           {searchResults.map((user) => (
             <div
               key={user.id}
-              className="bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-between"
+              className="bg-white border border-gray-200 rounded-2xl p-5 hover:border-gray-300 hover:shadow-sm transition-all"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+              <div className="flex items-center gap-4">
+                {/* Avatar */}
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
                   {user.username.charAt(0).toUpperCase()}
                 </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800">{user.username}</h3>
-                  <p className="text-sm text-gray-500">{user.email}</p>
+                
+                {/* User Info */}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-gray-900 text-sm">{user.username}</h3>
+                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
                 </div>
+                
+                {/* Send Button */}
+                <button
+                  onClick={() => handleSendRequest(user.id)}
+                  className="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:opacity-90 font-medium text-sm transition-all flex-shrink-0"
+                >
+                  Send Request
+                </button>
               </div>
-              <button
-                onClick={() => handleSendRequest(user.id)}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-              >
-                Send Request
-              </button>
             </div>
           ))}
         </div>
