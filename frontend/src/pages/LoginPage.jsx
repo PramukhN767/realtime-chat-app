@@ -55,7 +55,7 @@ function LoginPage() {
         <form onSubmit={handleSubmit}>
           <div className="mb-5">
             <label className="block text-xs font-medium text-gray-600 uppercase tracking-wider mb-2">
-              Username
+              Email
             </label>
             <input
               type="email"
