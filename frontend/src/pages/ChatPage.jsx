@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useContext } from 'react';
+import { useState, useRef, useEffect, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
@@ -22,33 +22,117 @@ function ChatPage() {
   const [searchQuery, setSearchQuery] = useState('');
   
   const messagesEndRef = useRef(null);
+  const selectedUserRef = useRef(selectedUser);
+  const userRef = useRef(user);
 
   useEffect(() => {
-    if (token) {
-      console.log('Connecting to socket...');
-      socketService.connect(token);
+    selectedUserRef.current = selectedUser;
+  }, [selectedUser]);
 
-      socketService.on('receive_message', (message) => {
-        console.log('Received message:', message);
-        handleReceiveMessage(message);
-      });
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
-      socketService.on('message_sent', (message) => {
-        console.log('Message sent confirmed:', message);
-        handleMessageSent(message);
-      });
-
-      socketService.on('user_status_changed', handleUserStatusChange);
-      socketService.on('user_typing', handleUserTyping);
-
-      return () => {
-        socketService.off('receive_message', handleReceiveMessage);
-        socketService.off('message_sent', handleMessageSent);
-        socketService.off('user_status_changed', handleUserStatusChange);
-        socketService.off('user_typing', handleUserTyping);
-      };
+  // Socket event handlers using useCallback
+  const handleReceiveMessage = useCallback((message) => {
+    console.log('Received message:', message);
+    
+    const currentSelectedUser = selectedUserRef.current;
+    const currentUser = userRef.current;
+    
+    if (currentSelectedUser && currentUser) {
+      const isRelevant = 
+        (message.senderId === currentSelectedUser.id && message.recipientId === currentUser.id) ||
+        (message.senderId === currentUser.id && message.recipientId === currentSelectedUser.id);
+      
+      if (isRelevant) {
+        setMessages((prev) => {
+          const exists = prev.some(m => m.id === message.id);
+          if (exists) {
+            console.log('Message already exists, skipping');
+            return prev;
+          }
+          console.log('Adding new message to state');
+          return [...prev, message];
+        });
+      }
     }
-  }, [token]);
+  }, []);
+
+  const handleMessageSent = useCallback((message) => {
+    console.log('✉️ Message sent confirmed:', message);
+    setMessages((prev) => 
+      prev.map(m => 
+        typeof m.id === 'string' && m.id.startsWith('temp-') && m.content === message.content
+          ? message
+          : m
+      )
+    );
+  }, []);
+
+  const handleUserStatusChange = useCallback(({ userId, isOnline }) => {
+    console.log('User status changed:', userId, isOnline);
+    setUsers((prevUsers) =>
+      prevUsers.map((user) =>
+        user.id === userId ? { ...user, isOnline } : user
+      )
+    );
+
+    const currentSelectedUser = selectedUserRef.current;
+    if (currentSelectedUser?.id === userId) {
+      setSelectedUser((prev) => ({ ...prev, isOnline }));
+    }
+  }, []);
+
+  const handleUserTyping = useCallback(({ userId, isTyping }) => {
+    setTypingUsers((prev) => {
+      const newSet = new Set(prev);
+      if (isTyping) {
+        newSet.add(userId);
+      } else {
+        newSet.delete(userId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Socket connection effect
+  useEffect(() => {
+    if (!token) return;
+
+    console.log('🔌 Connecting to socket with token...');
+    socketService.connect(token);
+
+    // Register all event listeners
+    socketService.on('receive_message', handleReceiveMessage);
+    socketService.on('message_sent', handleMessageSent);
+    socketService.on('user_status_changed', handleUserStatusChange);
+    socketService.on('user_typing', handleUserTyping);
+
+    socketService.on('connect', () => {
+      console.log('Socket connected successfully!');
+    });
+
+    socketService.on('disconnect', () => {
+      console.log('Socket disconnected');
+    });
+
+    socketService.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+    });
+
+    // Cleanup function
+    return () => {
+      console.log('Cleaning up socket listeners');
+      socketService.off('receive_message', handleReceiveMessage);
+      socketService.off('message_sent', handleMessageSent);
+      socketService.off('user_status_changed', handleUserStatusChange);
+      socketService.off('user_typing', handleUserTyping);
+      socketService.off('connect');
+      socketService.off('disconnect');
+      socketService.off('connect_error');
+    };
+  }, [token, handleReceiveMessage, handleMessageSent, handleUserStatusChange, handleUserTyping]);
 
   useEffect(() => {
     fetchUsers();
@@ -102,56 +186,6 @@ function ChatPage() {
     }
   };
 
-  const handleReceiveMessage = (message) => {
-    if (selectedUser) {
-      const isRelevant = 
-        (message.senderId === selectedUser.id && message.recipientId === user.id) ||
-        (message.senderId === user.id && message.recipientId === selectedUser.id);
-      
-      if (isRelevant) {
-        setMessages((prev) => {
-          const exists = prev.some(m => m.id === message.id);
-          if (exists) return prev;
-          return [...prev, message];
-        });
-      }
-    }
-  };
-
-  const handleMessageSent = (message) => {
-    setMessages((prev) => 
-      prev.map(m => 
-        typeof m.id === 'string' && m.id.startsWith('temp-') && m.content === message.content
-          ? message
-          : m
-      )
-    );
-  };
-
-  const handleUserStatusChange = ({ userId, isOnline }) => {
-    setUsers((prevUsers) =>
-      prevUsers.map((user) =>
-        user.id === userId ? { ...user, isOnline } : user
-      )
-    );
-
-    if (selectedUser?.id === userId) {
-      setSelectedUser((prev) => ({ ...prev, isOnline }));
-    }
-  };
-
-  const handleUserTyping = ({ userId, isTyping }) => {
-    setTypingUsers((prev) => {
-      const newSet = new Set(prev);
-      if (isTyping) {
-        newSet.add(userId);
-      } else {
-        newSet.delete(userId);
-      }
-      return newSet;
-    });
-  };
-
   const handleUserClick = (user) => {
     setSelectedUser(user);
   };
@@ -167,6 +201,7 @@ function ChatPage() {
       createdAt: new Date().toISOString(),
     };
 
+    console.log('Sending message:', tempMessage);
     setMessages((prev) => [...prev, tempMessage]);
 
     socketService.emit('send_message', {
@@ -234,7 +269,7 @@ function ChatPage() {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Sidebar --- User List */}
+      {/* Sidebar - User List */}
       <div className="w-80 bg-white border-r flex flex-col">
         <div className="p-4 border-b bg-gradient-to-r from-blue-500 to-purple-600">
           <div className="flex items-center justify-between mb-3">
@@ -243,7 +278,6 @@ function ChatPage() {
               <p className="text-sm text-blue-100">{user?.username}</p>
             </div>
             <div className="flex gap-2">
-              {/* Add Contacts Button */}
               <Link
                 to="/find-contacts"
                 className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-lg text-sm transition"
@@ -259,7 +293,6 @@ function ChatPage() {
             </div>
           </div>
           
-          {/* Search Box */}
           <div className="relative">
             <input
               type="text"
@@ -298,11 +331,10 @@ function ChatPage() {
         </div>
       </div>
 
-      {/* Main Chatting Area */}
+      {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {selectedUser ? (
           <>
-            {/* Chat Header */}
             <div className="bg-white border-b p-4 flex items-center gap-3">
               <div className="relative">
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
@@ -320,7 +352,6 @@ function ChatPage() {
               </div>
             </div>
 
-            {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
               {isLoading ? (
                 <div className="flex items-center justify-center h-full">
@@ -340,7 +371,6 @@ function ChatPage() {
                     />
                   ))}
                   
-                  {/* Typing Indicator */}
                   {typingUsers.has(selectedUser?.id) && (
                     <div className="flex justify-start mb-4">
                       <div className="bg-gray-200 px-4 py-2 rounded-2xl rounded-bl-none">
@@ -358,7 +388,6 @@ function ChatPage() {
               )}
             </div>
 
-            {/* Message Input */}
             <MessageInput 
               onSendMessage={handleSendMessage} 
               recipientId={selectedUser.id} 
